@@ -89,6 +89,14 @@ class DataBase:
         return List
         self.Close()
 
+    def Delete(self, UserName):
+        self.Open()
+        self.Cursor.execute("""DELETE from karbar where UserName = ?""", (UserName,))
+        self.Connect.commit()
+        mainPage.Page.destroy()
+        enterPage.__init__()
+        enterPage.show()
+        self.Close()
 
     def Close(self):
         self.Cursor.close()
@@ -188,7 +196,6 @@ class CheckAdmin:
             self.Button=tkinter.Button(self.Page, text='Change', font=('arial'), command=self.change)
             self.Button.place(x=110, y=150)
         else:
-            mainPage = MainPage()
             mainPage.show()
 
     def change(self):
@@ -198,39 +205,61 @@ class CheckAdmin:
             else:
                 dataBase.Change('admin', self.Entry.get(), 1)
                 self.Page.destroy()
-                mainPage = MainPage()
                 mainPage.show()
         else:
             self.Label.config(text='Please enter somthing', fg='red')
 
 class MainPage:
-    def __init__(self):
-        self.Page=tkinter.Tk()
-        self.Page.geometry('500x600')
-
     def show(self):
-        list=dataBase.Show(enterPage.UserName)
-        label=tkinter.Label(self.Page, text=f"User name :{list[0]}\nFirst name :{list[2]}\nLast name :{list[3]}\nGames :{list[4]}\nWins :{list[5]}", font=('arial'))
-        label.pack()
-        button_change=tkinter.Button(self.Page, text='change', width=10, height=5, command=self.change)
-        button_change.pack()
-        label2=tkinter.Label(self.Page, text='please enter size of table:', font=('arial'))
-        label2.pack()
-        self.size=tkinter.Entry(self.Page, width=2, font=('arial'))
-        self.size.pack()
-        label3=tkinter.Label(self.Page, text='choose your enemy!', font=('arial'))
-        label3.pack()
-        Users=dataBase.Show_Users()
-        Enemy=[]
-        for i in range(len(Users)):
-            if Users[i][0] != enterPage.UserName:
-                Enemy.append(Users[i][0])
-        self.enemy=ttk.Combobox(self.Page, values=Enemy, font=('arial'))
-        self.enemy.set(Enemy[0])
-        self.enemy.pack()
-        button_play=tkinter.Button(self.Page, text='Play', width=10, height=5, command=self.play)
-        button_play.pack()
+        self.Page=tkinter.Tk()
+        self.Page.geometry('1000x800')
+        datas=dataBase.Show(enterPage.UserName)
+        self.imagePlay = tkinter.PhotoImage(file='play.png')
+        imageSetting = tkinter.PhotoImage(file='setting.png')
+        imageExit = tkinter.PhotoImage(file='exit.png')
+        imagebg = tkinter.PhotoImage(file='backg.png')
+        imageDelete = tkinter.PhotoImage(file='delete.png')
+        labelbg = tkinter.Label(self.Page, image=imagebg)
+        labelbg.pack()
+        labelName = tkinter.Label(self.Page, text=f'Name : {datas[2]}', font='arial')
+        labelName.place(x=0, y=0)
+        labelLastName = tkinter.Label(self.Page, text=f'Last name : {datas[3]}', font='arial')
+        labelLastName.place(x=0, y=50)
+        labelUser = tkinter.Label(self.Page, text=f'User name : {datas[0]}', font='arial')
+        labelUser.place(x=0, y=100)
+        labelGames = tkinter.Label(self.Page, text=f'Games : {datas[4]}', font='arial')
+        labelGames.place(x=0, y=150)
+        labelwins = tkinter.Label(self.Page, text=f'Wins : {datas[5]}', font='arial')
+        labelwins.place(x=0, y=200)
+        buttonPlay = tkinter.Button(self.Page, image=self.imagePlay, command=self.Size)
+        buttonPlay.place(x=490, y=300)
+        buttonChange = tkinter.Button(self.Page, image=imageSetting, command=self.change)
+        buttonChange.place(x=490, y=380)
+        delete=tkinter.Button(self.Page, image=imageDelete, command=lambda x=enterPage.UserName : dataBase.Delete(x), font='arial')
+        delete.place(x=490, y=460)
+        buttonExit = tkinter.Button(self.Page, image=imageExit, command=exit)
+        buttonExit.place(x=490, y=540)
         self.Page.mainloop()
+
+    def Size(self):
+        self.win=tkinter.Toplevel(self.Page)
+        label1=tkinter.Label(self.win, text='enemy : ', font='arial')
+        label1.place(x=0, y=0)
+        l=dataBase.Show_Users()
+        list=[]
+        for i in range(len(l)):
+            if l[i][0] != enterPage.UserName:
+                list.append(l[i][0])
+        if len(list)>0:
+            self.enemy=tkinter.ttk.Combobox(self.win, values=list, font='arial', width=8)
+            self.enemy.set(list[0])
+            self.enemy.place(x=80, y=0)
+            label2=tkinter.Label(self.win, text='size     : ', font='arial')
+            label2.place(x=0, y=30)
+            self.size=tkinter.Entry(self.win, width=5, font='arial')
+            self.size.place(x=80, y=38)
+            button=tkinter.Button(self.win, image=self.imagePlay, command=self.play)
+            button.place(x=60, y=80)
 
     def play(self):
         if self.size.get():
@@ -259,6 +288,8 @@ class MainPage:
                     but.append(tkinter.Button(self.Page,width=5, height=2, bg='white', font=('arial'), command=lambda i=i, j=j : self.click(i, j)))
                     but[j].place(x=i * 62 + ((self.W-60*self.n)//2), y=j * 62+60)
                 self.btn.append(but)
+        else:
+            self.size.config(bg='green')
 
     def click(self, i, j):
         if self.table[j][i] == 0:
@@ -390,12 +421,16 @@ class MainPage:
         winner=""
         if self.points[0] > self.points[1]:
             winner=self.player1
+            dataBase.Change(self.player1, dataBase.Show(self.player1)[5]+1, 5)
         elif self.points[0] == self.points[1]:
             winner='nobody'
         else:
+            dataBase.Change(self.player2, dataBase.Show(self.player2)[5]+1, 5)
             winner=self.player2
         messagebox.showinfo(message=f"{winner} win the game")
 
+        dataBase.Change(self.player1, dataBase.Show(self.player1)[4]+1, 4)
+        dataBase.Change(self.player2, dataBase.Show(self.player2)[4]+1, 4)
         self.Page.destroy()
         enterPage.__init__()
         enterPage.show()
@@ -443,4 +478,5 @@ class MainPage:
 
 dataBase=DataBase()
 enterPage=EnterPage()
+mainPage = MainPage()
 enterPage.show()
